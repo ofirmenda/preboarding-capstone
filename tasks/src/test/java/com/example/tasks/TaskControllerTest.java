@@ -108,10 +108,132 @@ public class TaskControllerTest {
             .content("""
                     {"title": "buy tomato"}
                     """))
-            .andExpect(status().isCreated());
+             .andExpect(status().isCreated());
                 mockMvc.perform(delete("/tasks/0"))
                .andExpect(status().isNoContent());
     }
 
+    @Test
+    // filter tasks by done=true
+    void filterTasksByDoneTrueTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy milk", "done": false}
+                        """))
+                .andExpect(status().isCreated());
 
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy cheese", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/tasks").param("done", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("buy cheese"))
+                .andExpect(jsonPath("$[0].done").value(true));
+    }
+
+    @Test
+    // filter tasks by done=false
+    void filterTasksByDoneFalseTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy milk", "done": false}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy cheese", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/tasks").param("done", "false"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].title").value("buy milk"))
+                .andExpect(jsonPath("$[0].done").value(false));
+    }
+
+    @Test
+    // update task successfully
+    void updateTaskSuccessTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy milk", "done": false}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(put("/tasks/0")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy oat milk", "done": true}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(0))
+                .andExpect(jsonPath("$.title").value("buy oat milk"))
+                .andExpect(jsonPath("$.done").value(true));
+
+        mockMvc.perform(get("/tasks/0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.title").value("buy oat milk"))
+                .andExpect(jsonPath("$.done").value(true));
+    }
+
+    @Test
+    // update task preserves existing done status if omitted
+    void updateTaskPreserveDoneStatusTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy cheese", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(put("/tasks/0")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy gouda"}
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(0))
+                .andExpect(jsonPath("$.title").value("buy gouda"))
+                .andExpect(jsonPath("$.done").value(true));
+    }
+
+    @Test
+    // update non existing task returns 404
+    void updateNonExistingTaskTest() throws Exception {
+        mockMvc.perform(put("/tasks/99")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy milk", "done": true}
+                        """))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    // update task with empty title returns 400
+    void updateTaskWithEmptyTitleTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "buy milk"}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(put("/tasks/0")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": ""}
+                        """))
+                .andExpect(status().isBadRequest());
+    }
 }

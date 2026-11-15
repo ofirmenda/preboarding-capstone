@@ -1,22 +1,20 @@
 package com.example.tasks;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Objects;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import java.util.List;
-import java.util.ArrayList;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 public class TaskController {
@@ -24,8 +22,13 @@ public class TaskController {
    Long counter = (long) 0;
 
   @GetMapping("/tasks")
-  public List<Task> getTasks() {
-    return tasks;
+  public List<Task> getTasks(@RequestParam(required = false) Boolean done) {
+    if (done == null) {
+      return tasks;
+    }
+    return tasks.stream()
+        .filter(task -> Objects.equals(task.done(), done))
+        .toList();
   }
 
   @GetMapping("/tasks/{id}")
@@ -47,6 +50,24 @@ public class TaskController {
     tasks.add(newTask);
     return newTask;
   }
+
+  @PutMapping("/tasks/{id}")
+  public Task updateTask(@PathVariable long id, @RequestBody Task task) {
+    if (task.title() == null || task.title().isBlank()) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title required");
+    }
+    for (int i = 0; i < tasks.size(); i++) {
+      Task existing = tasks.get(i);
+      if (existing.id() == id) {
+        Boolean updatedDone = task.done() != null ? task.done() : existing.done();
+        Task updatedTask = new Task(id, task.title(), updatedDone);
+        tasks.set(i, updatedTask);
+        return updatedTask;
+      }
+    }
+    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found");
+  }
+
   @DeleteMapping("/tasks/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void task(@PathVariable long id) {
