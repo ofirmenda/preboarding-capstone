@@ -236,4 +236,69 @@ public class TaskControllerTest {
                         """))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    // count when task list is empty
+    void getTaskCountEmptyTest() throws Exception {
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.done").value(0));
+    }
+
+    @Test
+    // count with mixed done and pending tasks
+    void getTaskCountMixedTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "task 1", "done": false}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "task 2", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "task 3", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(3))
+                .andExpect(jsonPath("$.done").value(2));
+    }
+
+    @Test
+    // count after deleting a task
+    void getTaskCountAfterDeleteTest() throws Exception {
+        mockMvc.perform(post("/tasks")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"title": "task 1", "done": true}
+                        """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(delete("/tasks/0"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/tasks/count"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").value(0))
+                .andExpect(jsonPath("$.done").value(0));
+    }
+
+    @Test
+    // unsupported HTTP method on /tasks/count
+    void taskCountMethodNotAllowedTest() throws Exception {
+        mockMvc.perform(post("/tasks/count"))
+                .andExpect(status().isMethodNotAllowed());
+    }
 }

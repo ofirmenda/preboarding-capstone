@@ -31,6 +31,11 @@ public class TaskController {
         .toList();
   }
 
+  @GetMapping("/tasks/count")
+  public TaskCount getTaskCount() {
+    return TaskCount.from(tasks);
+  }
+
   @GetMapping("/tasks/{id}")
   public Task getTask(@PathVariable long id) {
     Task result = tasks.stream()
